@@ -2,7 +2,7 @@
 
 React Native implementation of Apple's RoomPlan SDK.
 
-Read more about it here: [Apple - RoomPlan USD Export Options](https://developer.apple.com/augmented-reality/roomplan/)
+Read more about it here: [Apple - RoomPlan](https://developer.apple.com/augmented-reality/roomplan/)
 
 # Usage
 
