@@ -11,8 +11,13 @@ export enum ExportType {
   Model = "MODEL",
 }
 
-export interface ExpoRoomplanModuleType {
-  startCapture(scanName: string, exportType?: ExportType): Promise<void>;
+export interface UseRoomPlanParams {
+  exportType?: ExportType,
+  sendFileLoc?: boolean,
+}
+
+export interface ExpoRoomPlanModuleType {
+  startCapture(scanName: string, exportType: ExportType, sendFileLoc: boolean): Promise<void>;
   stopCapture(): Promise<void>;
   // test
   addListener?(eventName: string, listener: (event: any) => void): { remove: () => void };
@@ -20,10 +25,8 @@ export interface ExpoRoomplanModuleType {
 }
 
 export interface UseRoomPlanInterface {
-  startRoomPlan: (scanName: string, exportType?: ExportType) => Promise<void>;
+  startRoomPlan: (scanName: string) => Promise<void>;
   roomScanStatus: ScanStatus;
-}
-
-export interface UseRoomPlanParams {
-  exportType?: ExportType
+  jsonUrl: string | null;
+  scanUrl: string | null;
 }

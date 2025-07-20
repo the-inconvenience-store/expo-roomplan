@@ -17,10 +17,11 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
     private var finalStructure: CapturedStructure?
     private let structureBuilder = StructureBuilder(options: [.beautifyObjects])
 
-    var onDismiss: ((ScanStatus) -> Void)?
+    var onDismiss: (([String: Any]) -> Void)?
 
     var scanName: String?
     var exportType: String?
+    var sendFileLoc: Bool?
     var capturedRoomArray: [CapturedRoom] = []
 
     // UI elements
@@ -319,6 +320,13 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
 
                 // reset finalStructure before sending data
                 finalStructure = nil
+                
+                let shouldSendFileLoc = sendFileLoc ?? false
+
+                if (shouldSendFileLoc) {
+                    self.sendScanResultAndDismiss(status: .OK, scanUrl: destinationURL.absoluteString, jsonUrl: capturedRoomURL.absoluteString)
+                    return
+                }
 
                 let activityVC = UIActivityViewController(
                     activityItems: [destinationFolderURL],
@@ -331,7 +339,7 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
                     completed,
                     returnedItems,
                     activityError in
-                    self.sendStatusAndDismiss(status: .OK)
+                    self.sendScanResultAndDismiss(status: .OK)
                 }
 
                 if let popOver = activityVC.popoverPresentationController {
@@ -343,20 +351,36 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
             } catch {
                 print("[RoomPlan] ERROR MERGING")
                 print("[RoomPlan] Error = \(error)")
-                self.sendStatusAndDismiss(status: .Error)
+                self.sendScanResultAndDismiss(status: .Error)
                 return
             }
         }
     }
 
-    func sendStatusAndDismiss(status: ScanStatus) {
-        onDismiss?(status)
+    func sendScanResultAndDismiss(status: ScanStatus? = nil, scanUrl: String? = nil, jsonUrl: String? = nil) {
+        var eventData: [String: Any] = [:]
+        
+        if let status = status {
+            eventData["status"] = status.rawValue
+        }
+        
+        if let jsonUrl = jsonUrl {
+            eventData["jsonUrl"] = jsonUrl
+        }
 
+        if let scanUrl = scanUrl {
+            eventData["scanUrl"] = scanUrl
+        }
+        
+        // Send the unified event
+        onDismiss?(eventData)
+        
         let dismissAction = {
             self.activityIndicator.stopAnimating()
             self.dismiss(animated: true, completion: nil)
         }
-
+        
+        // Handle timing and cleanup based on status
         if status == .OK {
             DispatchQueue.main.asyncAfter(
                 deadline: .now() + 0.5,
@@ -382,14 +406,13 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
         roomCaptureView?.captureSession.run(
             configuration: roomCaptureSessionConfig
         )
-        // alter background on finish button
         UIView.transition(
-            with: finishButton,
+            with: cancelButton,
             duration: 0.5,
             options: .transitionCrossDissolve,
             animations: {
                 self.cancelButton.backgroundColor = UIColor.black
-                    .withAlphaComponent(0.6)  // make button background visible
+                    .withAlphaComponent(0)  // make button background invisible again
             },
             completion: nil
         )
@@ -420,7 +443,7 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
         { action in
             // reset final structure on cancel
             self.finalStructure = nil
-            self.sendStatusAndDismiss(status: .Canceled)
+            self.sendScanResultAndDismiss(status: .Canceled)
         }
         alertController.addAction(confirmAction)
 

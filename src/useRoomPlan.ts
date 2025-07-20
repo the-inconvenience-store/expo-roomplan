@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react';
-import ExpoRoomplan from './ExpoRoomplanModule';
-import { ScanStatus, UseRoomPlanInterface, UseRoomPlanParams } from './ExpoRoomplan.types';
+import { Platform } from 'react-native';
+import ExpoRoomPlan from './ExpoRoomPlanModule';
+import { UseRoomPlanParams, ScanStatus, UseRoomPlanInterface, ExportType } from './ExpoRoomPlan.types';
 
 export default function useRoomPlan(params?: UseRoomPlanParams): UseRoomPlanInterface {
   const [roomScanStatus, setRoomScanStatus] = useState<ScanStatus>(ScanStatus.NotStarted);
+  const [scanUrl, setScanUrl] = useState<null | string>(null)
+  const [jsonUrl, setJsonUrl] = useState<null | string>(null)
 
   useEffect(() => {
-    const sub = ExpoRoomplan.addListener?.('onDismissEvent', (event: { value: ScanStatus }) => {
-      setRoomScanStatus(event.value);
-      console.log("RoomScan status: ", event.value);
+    const sub = ExpoRoomPlan.addListener?.('onDismissEvent', (event: { status: ScanStatus, scanUrl?: string, jsonUrl?: string }) => {
+      setRoomScanStatus(event.status);
+      console.log('RoomScan status: ', event.status);
+      if (event.scanUrl) {
+        setScanUrl(event.scanUrl);
+        console.log('Scan URL: ', event.scanUrl);
+      }
+      if (event.jsonUrl) {
+        setJsonUrl(event.jsonUrl);
+        console.log('JSON URL: ', event.jsonUrl);
+      }
     });
 
     return () => {
@@ -17,21 +28,25 @@ export default function useRoomPlan(params?: UseRoomPlanParams): UseRoomPlanInte
   }, []);
 
   const startRoomPlan = async (scanName: string) => {
+    if (Platform.OS === 'android') {
+      throw new Error('RoomPlan SDK only available on iOS.');
+    }
     try {
-      // optional ExportType from params. defaults internally to "parametric"
-      if (params?.exportType) {
-        await ExpoRoomplan.startCapture(scanName, params.exportType);
-      } else {
-        await ExpoRoomplan.startCapture(scanName);
-      }
+      // ExportType: defaults internally to 'parametric'
+      // Model file location is not returned by default.
+      const exportType = params?.exportType ?? ExportType.Parametric;
+      const sendFileLoc = params?.sendFileLoc ?? false;
+      ExpoRoomPlan.startCapture(scanName, exportType, sendFileLoc);
     } catch (err) {
       console.error('startCapture failed:', err);
-      throw new Error('Unable to start room scan.');
+      throw err;
     }
   };
 
   return {
     startRoomPlan,
     roomScanStatus,
+    scanUrl,
+    jsonUrl,
   };
 }
