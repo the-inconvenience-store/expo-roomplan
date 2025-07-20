@@ -268,11 +268,12 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
     }
 
     func exportResults() {
+        let exportedScanName = scanName ?? "Room"
 
         let destinationFolderURL = FileManager.default.temporaryDirectory
             .appending(path: "Export")
-        let destinationURL = destinationFolderURL.appending(path: "Room.usdz")
-        let capturedRoomURL = destinationFolderURL.appending(path: "Room.json")
+        let destinationURL = destinationFolderURL.appending(path: "\(exportedScanName).usdz")
+        let capturedRoomURL = destinationFolderURL.appending(path: "\(exportedScanName).json")
 
         // UI responsiveness, disable cancel button
         cancelButton.removeTarget(
