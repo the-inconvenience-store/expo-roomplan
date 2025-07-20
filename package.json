@@ -1,6 +1,6 @@
 {
   "name": "expo-roomplan",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React Native implementation of Apple's RoomPlan SDK",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -19,7 +19,22 @@
     "react-native",
     "expo",
     "expo-roomplan",
-    "ExpoRoomplan"
+    "ExpoRoomPlan",
+    "react-native",
+    "roomplan",
+    "arkit",
+    "3d",
+    "floor-plan",
+    "room-scanning",
+    "augmented-reality",
+    "ar",
+    "lidar",
+    "ios",
+    "apple",
+    "room-capture",
+    "3d-scanning",
+    "spatial",
+    "mobile"
   ],
   "repository": "https://github.com/fordat/expo-roomplan",
   "bugs": {
