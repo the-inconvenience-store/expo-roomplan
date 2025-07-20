@@ -66,6 +66,17 @@ For bare React Native projects, you must ensure that you have [installed and con
 npm install expo-roomplan
 ```
 
+Add this to your `expo-module.config.json`:
+
+```
+{
+  "platforms": ["android", "ios"],
+  "android": {
+    "moduleName": "ExpoRoomPlan"
+  }
+}
+```
+
 ### Configure for Android
 
 Only compatible with iOS 17.0 or higher.
