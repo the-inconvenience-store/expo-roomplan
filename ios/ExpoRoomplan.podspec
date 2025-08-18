@@ -3,7 +3,7 @@ require 'json'
 package = JSON.parse(File.read(File.join(__dir__, '..', 'package.json')))
 
 Pod::Spec.new do |s|
-  s.name           = 'ExpoRoomPlan'
+  s.name           = 'ExpoRoomplan'
   s.version        = package['version']
   s.summary        = package['description']
   s.description    = package['description']
@@ -26,5 +26,9 @@ Pod::Spec.new do |s|
 
   s.ios.deployment_target = '17.0'
 
+  # Explicitly link system frameworks used by RoomPlan
+  s.frameworks = 'RoomPlan', 'RealityKit', 'ARKit'
+
   s.source_files = "**/*.{h,m,mm,swift,hpp,cpp}"
+
 end
