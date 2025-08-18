@@ -1,5 +1,6 @@
-import type { ExpoRoomPlanModuleType } from './ExpoRoomPlan.types';
-import { requireNativeModule } from 'expo-modules-core';
+import type { ExpoRoomPlanModuleType } from "./ExpoRoomplan.types";
+import { requireNativeModule } from "expo-modules-core";
 
-const ExpoRoomplan = requireNativeModule<ExpoRoomPlanModuleType>('ExpoRoomPlan');
+const ExpoRoomplan =
+  requireNativeModule<ExpoRoomPlanModuleType>("ExpoRoomPlan");
 export default ExpoRoomplan;
