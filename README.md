@@ -31,6 +31,7 @@ const { startRoomPlan } = useRoomPlan({ exportType: ExportType.Mesh, sendFileLoc
 By default, it exports to parametric generates an ActivityViewController to share via AirDrop or email or other methods.
 
 There are three export types:
+
 - parametric
 - mesh
 - model
@@ -46,15 +47,15 @@ const { roomScanStatus } = useRoomPlan();
 ```
 
 It watches the internal status of the scan. It has 4 different states:
+
 - Not Started
 - Canceled
 - Error
 - OK
 
-
 # Installation in managed Expo projects
 
-For [managed](https://docs.expo.dev/archive/managed-vs-bare/) Expo projects, please follow the installation instructions in the [API documentation for the latest stable release](#api-documentation). If you follow the link and there is no documentation available then this library is not yet usable within managed projects &mdash; it is likely to be included in an upcoming Expo SDK release.
+For a step-by-step guide on using this library in a managed Expo app (including privacy manifests and the config plugin), see the tutorial [here](./example-managed/README.md).
 
 # Installation in bare React Native projects
 
@@ -91,4 +92,4 @@ Replace `YOUR_TEAM_ID` with a real development team.
 
 # Contributing
 
-Contributions are very welcome! Please refer to guidelines described in the [contributing guide]( https://github.com/expo/expo#contributing).
+Contributions are very welcome! Please refer to guidelines described in the [contributing guide](https://github.com/expo/expo#contributing).
