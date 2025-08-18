@@ -27,7 +27,8 @@
     "augmented-reality",
     "ar",
     "lidar",
-    "ios"
+    "ios",
+    "mobile"
   ],
   "repository": "https://github.com/fordat/expo-roomplan",
   "bugs": {
