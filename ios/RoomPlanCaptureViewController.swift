@@ -12,6 +12,7 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
     private var roomCaptureView: RoomCaptureView!
     private var roomCaptureSessionConfig: RoomCaptureSession.Configuration =
         RoomCaptureSession.Configuration()
+    private var isSessionRunning: Bool = false
 
     private var finalResults: CapturedRoom?
     private var finalStructure: CapturedStructure?
@@ -64,12 +65,12 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
             ofSize: 16,
             weight: .bold
         )
-        finishButton.setTitle("Finish", for: .normal) 
+        finishButton.setTitle("Finish", for: .normal)
 
-        // add the action for button press
+        // Finish should either stop scanning (if running) or confirm exit (if post-scan)
         finishButton.addTarget(
             self,
-            action: #selector(stopSession),
+            action: #selector(finishTapped),
             for: .touchUpInside
         )
 
@@ -195,13 +196,7 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
             },
             completion: nil
         )
-        // disable finish button
-        finishButton.removeTarget(
-            self,
-            action: #selector(stopSession),
-            for: .touchUpInside
-        )
-        finishButton.isEnabled = false
+        // Keep Finish active; it will now confirm exit when no session is running.
 
         NSLayoutConstraint.activate([
             exportButton.heightAnchor.constraint(equalToConstant: 50),
@@ -240,6 +235,8 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
             action: #selector(superExportResults),
             for: .touchUpInside
         )
+        // Also disable Finish to avoid exiting mid-export
+        finishButton.isEnabled = false
         anotherScanButton.isEnabled = false
         anotherScanButton.removeTarget(
             self,
@@ -398,6 +395,7 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
         roomCaptureView?.captureSession.run(
             configuration: roomCaptureSessionConfig
         )
+        isSessionRunning = true
     }
 
     @IBAction func restartSession() {
@@ -407,6 +405,7 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
         roomCaptureView?.captureSession.run(
             configuration: roomCaptureSessionConfig
         )
+        isSessionRunning = true
         UIView.transition(
             with: cancelButton,
             duration: 0.5,
@@ -417,18 +416,41 @@ class RoomPlanCaptureViewController: UIViewController, RoomCaptureViewDelegate,
             },
             completion: nil
         )
-        finishButton.addTarget(
-            self,
-            action: #selector(stopSession),
-            for: .touchUpInside
-        )
+        // finishButton remains bound to finishTapped
         finishButton.isEnabled = true
     }
 
     @objc
     public func stopSession() {
         roomCaptureView?.captureSession.stop(pauseARSession: false)
+        isSessionRunning = false
         setupPostScanUI()
+    }
+
+    @objc
+    private func finishTapped() {
+        if isSessionRunning {
+            // Current behavior during scanning: stop the session and show post-scan UI
+            stopSession()
+        } else {
+            // Post-scan (or no active session): confirm finishing and exit the view
+            let alertController = UIAlertController(
+                title: "Finish Scanning?",
+                message:
+                    "You're about to close the scanner. You can export results first or finish now.",
+                preferredStyle: .alert
+            )
+
+            let confirmAction = UIAlertAction(title: "Finish", style: .destructive) { _ in
+                self.sendScanResultAndDismiss(status: .OK)
+            }
+            alertController.addAction(confirmAction)
+
+            let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+            alertController.addAction(cancelAction)
+
+            self.present(alertController, animated: true, completion: nil)
+        }
     }
 
     @objc
