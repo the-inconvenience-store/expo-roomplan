@@ -11,16 +11,23 @@ class RoomPlanCaptureUIView: ExpoView, RoomCaptureSessionDelegate, RoomCaptureVi
   // Events
   let onStatus = EventDispatcher()
   let onExported = EventDispatcher()
+  let onPreview = EventDispatcher()
 
   // Props
   var scanName: String? = nil
   var exportType: String? = nil
   var sendFileLoc: Bool = false
+  var exportOnFinish: Bool = true
 
   private var capturedRooms: [CapturedRoom] = []
   private let structureBuilder = StructureBuilder(options: [.beautifyObjects])
   private var isRunning: Bool = false
   private var lastExportTrigger: Double? = nil
+  private var lastFinishTrigger: Double? = nil
+  private var lastAddAnotherTrigger: Double? = nil
+  private var pendingFinish: Bool = false
+  private var pendingExport: Bool = false
+  private var previewEmitted: Bool = false
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
@@ -52,11 +59,13 @@ class RoomPlanCaptureUIView: ExpoView, RoomCaptureSessionDelegate, RoomCaptureVi
       let status = AVCaptureDevice.authorizationStatus(for: .video)
       switch status {
       case .authorized:
-        roomCaptureView.captureSession.run(configuration: configuration)
+  previewEmitted = false
+  roomCaptureView.captureSession.run(configuration: configuration)
       case .notDetermined:
         AVCaptureDevice.requestAccess(for: .video) { granted in
           DispatchQueue.main.async {
             if granted {
+              self.previewEmitted = false
               self.roomCaptureView.captureSession.run(configuration: self.configuration)
             } else {
               self.sendError("Camera permission was not granted.")
@@ -66,7 +75,8 @@ class RoomPlanCaptureUIView: ExpoView, RoomCaptureSessionDelegate, RoomCaptureVi
       case .denied, .restricted:
         sendError("Camera permission is denied or restricted.")
       @unknown default:
-        roomCaptureView.captureSession.run(configuration: configuration)
+  previewEmitted = false
+  roomCaptureView.captureSession.run(configuration: configuration)
       }
     } else {
       roomCaptureView.captureSession.stop(pauseARSession: false)
@@ -78,12 +88,37 @@ class RoomPlanCaptureUIView: ExpoView, RoomCaptureSessionDelegate, RoomCaptureVi
     guard let trigger else { return }
     if lastExportTrigger != trigger {
       lastExportTrigger = trigger
-      // Avoid exporting if nothing was captured yet
+      // If nothing captured yet, queue export until capture ends
       guard !capturedRooms.isEmpty else {
-        sendError("No rooms captured to export.")
+        pendingExport = true
         return
       }
       exportResults()
+    }
+  }
+
+  // Stop current capture, present the preview UI, and prepare to export.
+  func handleFinishTrigger(_ trigger: Double?) {
+    guard let trigger else { return }
+    if lastFinishTrigger == trigger { return }
+    lastFinishTrigger = trigger
+  // Stop capturing to finalize current room; preview will be presented by RoomPlan
+  pendingFinish = true
+    roomCaptureView.captureSession.stop(pauseARSession: false)
+  }
+
+  // Restart session to accumulate another room like the controller-based flow
+  func handleAddAnotherTrigger(_ trigger: Double?) {
+    guard let trigger else { return }
+    if lastAddAnotherTrigger == trigger { return }
+    lastAddAnotherTrigger = trigger
+    // Ensure current session is stopped, then start again to capture the next room
+  pendingFinish = false
+  pendingExport = false
+  previewEmitted = false
+  roomCaptureView.captureSession.stop(pauseARSession: false)
+    DispatchQueue.main.async {
+      self.roomCaptureView.captureSession.run(configuration: self.configuration)
     }
   }
 
@@ -98,7 +133,23 @@ class RoomPlanCaptureUIView: ExpoView, RoomCaptureSessionDelegate, RoomCaptureVi
       do {
         let capturedRoom = try await roomBuilder.capturedRoom(from: data)
         self.capturedRooms.append(capturedRoom)
-        self.sendStatus(.OK)
+        // If finishing, emit preview now that the processed room exists
+        if self.pendingFinish && !self.previewEmitted {
+          self.onPreview([:])
+          self.previewEmitted = true
+          // If requested, export right after preview
+          if self.exportOnFinish {
+            self.exportResults()
+          }
+          self.pendingFinish = false
+        }
+        // If an export was queued, export now
+        if self.pendingExport {
+          self.pendingExport = false
+          self.exportResults()
+        } else {
+          self.sendStatus(.OK)
+        }
       } catch {
         self.sendError("Failed to build captured room: \(error.localizedDescription)")
       }
@@ -111,6 +162,14 @@ class RoomPlanCaptureUIView: ExpoView, RoomCaptureSessionDelegate, RoomCaptureVi
 
   func captureView(shouldPresent roomDataForProcessing: CapturedRoomData, error: Error?) -> Bool {
     return true
+  }
+  
+  func captureView(didPresent processedResult: CapturedRoom, error: Error?) {
+    // RoomPlan presented its own preview UI; notify JS once
+    if !previewEmitted {
+      onPreview([:])
+      previewEmitted = true
+    }
   }
 
   // MARK: - Export
@@ -142,6 +201,8 @@ class RoomPlanCaptureUIView: ExpoView, RoomCaptureSessionDelegate, RoomCaptureVi
             "jsonUrl": capturedRoomURL.absoluteString
           ])
         }
+  // Also emit a final OK status after export
+  self.sendStatus(.OK)
       } catch {
         self.sendError("Export failed: \(error.localizedDescription)")
       }
